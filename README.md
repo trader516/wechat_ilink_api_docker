@@ -1,6 +1,6 @@
 # wechat_ilink_api_docker
 
-基于 `wechat-ilink-client` 封装的本地 / Docker 可运行 API 服务，提供：
+基于 [`wechat-ilink-client`](https://github.com/photon-hq/wechat-ilink-client) 封装的本地 / Docker 可运行 API 服务，提供：
 
 - 微信二维码登录
 - 多用户 `apiKey` 管理
@@ -13,6 +13,11 @@
 
 1. Docker 镜像编译和运行
 2. 最常用的 API 调用方式
+
+## 0. 来源说明
+
+- 原作者仓库：[`photon-hq/wechat-ilink-client`](https://github.com/photon-hq/wechat-ilink-client)
+- 本项目是在原作者仓库基础上的本地 API / Docker 封装，保留对原始实现与许可证的归属说明
 
 ## 1. 快速开始
 
@@ -408,3 +413,18 @@ pnpm typecheck
 | `GET` | `/status` | 查看当前账号在线状态 |
 | `GET` | `/me` | 查看当前账号详情 |
 | `POST` | `/me/apikey/reset` | 重置当前账号 API Key |
+
+## 10. 许可证
+
+本项目及其衍生封装遵循 MIT License 进行说明与分发。使用、复制、修改和分发本项目代码时，请保留原作者署名、原项目链接以及相关许可证声明。
+
+原始项目仓库：
+
+- [`photon-hq/wechat-ilink-client`](https://github.com/photon-hq/wechat-ilink-client)
+
+## 11. 法律免责声明
+
+- 本项目仅供技术研究、学习交流、接口调试与合法合规的开发测试使用。
+- 使用者应自行确认其使用行为符合所在地法律法规、监管要求、平台规则，以及腾讯/微信相关服务协议。
+- 因使用、误用、滥用或基于本项目进行二次开发、部署、传播所产生的账号封禁、数据泄露、业务中断、财产损失或其他直接、间接责任，项目作者与贡献者不承担任何责任。
+- 若你不同意上述条款，请勿使用、复制或分发本项目。
