@@ -1,0 +1,11 @@
+dist
+node_modules
+data
+.env
+.env.*
+!.env.example
+*.log
+.DS_Store
+.wrangler
+tmp-test-doc
+package-lock.json

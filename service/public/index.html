@@ -1,0 +1,953 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WeChat iLink 消息平台</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+    :root {
+      --bg-primary: #0a0a0f;
+      --bg-secondary: #12121a;
+      --bg-card: #1a1a2e;
+      --bg-card-hover: #1f1f35;
+      --bg-input: #16162a;
+      --border: #2a2a45;
+      --border-hover: #3a3a55;
+      --text-primary: #e8e8f0;
+      --text-secondary: #9898b0;
+      --text-muted: #6868a0;
+      --accent: #6c5ce7;
+      --accent-hover: #7c6cf7;
+      --accent-glow: rgba(108, 92, 231, 0.3);
+      --success: #00d2a0;
+      --success-bg: rgba(0, 210, 160, 0.1);
+      --warning: #ffa726;
+      --warning-bg: rgba(255, 167, 38, 0.1);
+      --danger: #ef5350;
+      --danger-bg: rgba(239, 83, 80, 0.1);
+      --gradient-1: linear-gradient(135deg, #6c5ce7 0%, #a855f7 100%);
+      --shadow-sm: 0 2px 8px rgba(0,0,0,0.3);
+      --shadow-md: 0 4px 16px rgba(0,0,0,0.4);
+      --shadow-lg: 0 8px 32px rgba(0,0,0,0.5);
+      --radius-sm: 8px;
+      --radius-md: 12px;
+      --radius-lg: 16px;
+      --radius-xl: 24px;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Inter', -apple-system, sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      min-height: 100vh;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      top: -50%; left: -50%;
+      width: 200%; height: 200%;
+      background: 
+        radial-gradient(ellipse at 20% 50%, rgba(108, 92, 231, 0.08) 0%, transparent 50%),
+        radial-gradient(ellipse at 80% 20%, rgba(168, 85, 247, 0.06) 0%, transparent 50%),
+        radial-gradient(ellipse at 50% 80%, rgba(0, 210, 160, 0.04) 0%, transparent 50%);
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    .app { position: relative; z-index: 1; }
+
+    /* ---- Shared ---- */
+    .form-input {
+      width: 100%;
+      padding: 12px 16px;
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text-primary);
+      font-size: 14px;
+      font-family: inherit;
+      transition: all 0.2s;
+      outline: none;
+    }
+    .form-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
+    .form-group { margin-bottom: 16px; }
+    .form-group label { display: block; font-size: 13px; font-weight: 500; color: var(--text-secondary); margin-bottom: 6px; }
+    textarea.form-input { resize: vertical; min-height: 100px; }
+
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+      padding: 11px 22px; border: none; border-radius: var(--radius-sm);
+      font-size: 14px; font-weight: 600; font-family: inherit; cursor: pointer;
+      transition: all 0.2s; text-decoration: none;
+    }
+    .btn-primary { background: var(--gradient-1); color: white; box-shadow: 0 4px 16px var(--accent-glow); }
+    .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 6px 24px var(--accent-glow); }
+    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+    .btn-block { width: 100%; }
+    .btn-sm { padding: 8px 16px; font-size: 13px; }
+    .btn-ghost { background: transparent; color: var(--text-secondary); border: 1px solid var(--border); }
+    .btn-ghost:hover { background: var(--bg-card-hover); border-color: var(--border-hover); color: var(--text-primary); }
+    .btn-danger { background: var(--danger); color: white; }
+    .btn-danger:hover { background: #f44336; }
+    .btn-success { background: var(--success); color: #0a0a0f; }
+    .btn-success:hover { background: #00e5b0; }
+    .btn-warning { background: var(--warning); color: #0a0a0f; font-weight: 600; }
+
+    .badge {
+      display: inline-flex; align-items: center; padding: 4px 10px;
+      border-radius: 20px; font-size: 12px; font-weight: 500;
+    }
+    .badge-success { background: var(--success-bg); color: var(--success); }
+    .badge-danger { background: var(--danger-bg); color: var(--danger); }
+
+    @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    @keyframes slideIn { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); } }
+
+    .spinner {
+      display: inline-block; width: 24px; height: 24px;
+      border: 3px solid rgba(255,255,255,0.2); border-top-color: white;
+      border-radius: 50%; animation: spin 0.8s linear infinite;
+    }
+
+    /* ---- Topbar ---- */
+    .topbar {
+      position: sticky; top: 0; z-index: 100;
+      background: rgba(10, 10, 15, 0.88); backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--border);
+      padding: 0 32px; height: 60px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .topbar-brand { display: flex; align-items: center; gap: 10px; }
+    .topbar-brand .icon {
+      width: 34px; height: 34px; background: var(--gradient-1); border-radius: 9px;
+      display: flex; align-items: center; justify-content: center; font-size: 15px;
+    }
+    .topbar-brand h2 {
+      font-size: 17px; font-weight: 700;
+      background: var(--gradient-1); -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    }
+    .topbar-actions { display: flex; gap: 10px; align-items: center; }
+    .topbar-user { font-size: 12px; color: var(--text-muted); max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+    /* ---- Views ---- */
+    .view { display: none; }
+    .view.active { display: block; animation: fadeInUp 0.4s ease; }
+
+    /* ---- Landing / Login ---- */
+    .landing {
+      display: flex; align-items: center; justify-content: center;
+      min-height: 100vh; padding: 20px;
+    }
+    .landing-card {
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: var(--radius-xl); padding: 44px 36px;
+      width: 100%; max-width: 440px; box-shadow: var(--shadow-lg);
+      animation: fadeInUp 0.6s ease;
+    }
+    .landing-logo { text-align: center; margin-bottom: 28px; }
+    .landing-logo .icon {
+      width: 60px; height: 60px; background: var(--gradient-1); border-radius: 18px;
+      display: inline-flex; align-items: center; justify-content: center;
+      font-size: 26px; margin-bottom: 14px; box-shadow: 0 8px 24px var(--accent-glow);
+    }
+    .landing-logo h1 {
+      font-size: 22px; font-weight: 700;
+      background: var(--gradient-1); -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    }
+    .landing-logo p { color: var(--text-secondary); font-size: 13px; margin-top: 6px; }
+
+    .landing-modes { display: flex; flex-direction: column; gap: 12px; margin-top: 8px; }
+
+    .mode-divider {
+      display: flex; align-items: center; gap: 12px;
+      color: var(--text-muted); font-size: 12px; margin: 8px 0;
+    }
+    .mode-divider::before, .mode-divider::after {
+      content: ''; flex: 1; height: 1px; background: var(--border);
+    }
+
+    /* QR section */
+    .qr-box {
+      text-align: center; padding: 24px;
+      background: var(--bg-secondary); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); margin-top: 0;
+    }
+    .qr-box img {
+      width: 200px; height: 200px; border-radius: var(--radius-sm);
+      border: 2px solid var(--border); display: block; margin: 0 auto 12px;
+    }
+    .qr-box .hint { font-size: 13px; color: var(--text-secondary); }
+    .qr-box .status-text { font-size: 13px; color: var(--accent); margin-top: 8px; }
+
+    /* ---- Dashboard ---- */
+    .main-content { max-width: 960px; margin: 0 auto; padding: 28px; }
+
+    .tabs {
+      display: flex; gap: 4px; background: var(--bg-secondary);
+      border-radius: var(--radius-md); padding: 4px; margin-bottom: 28px;
+      border: 1px solid var(--border);
+    }
+    .tab-btn {
+      flex: 1; padding: 10px 16px; background: transparent; border: none;
+      border-radius: var(--radius-sm); color: var(--text-secondary);
+      font-size: 13px; font-weight: 500; font-family: inherit; cursor: pointer;
+      transition: all 0.2s;
+    }
+    .tab-btn.active { background: var(--bg-card); color: var(--text-primary); box-shadow: var(--shadow-sm); }
+    .tab-btn:hover:not(.active) { color: var(--text-primary); background: rgba(255,255,255,0.03); }
+
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; animation: fadeInUp 0.3s ease; }
+
+    .card {
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 24px; margin-bottom: 16px;
+    }
+    .card:hover { border-color: var(--border-hover); }
+    .card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+    .card-title { font-size: 15px; font-weight: 600; }
+
+    /* API key section */
+    .apikey-section {
+      display: flex; align-items: center; gap: 10px;
+      padding: 14px 16px; background: var(--bg-input); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); margin-bottom: 16px;
+    }
+    .apikey-section .key {
+      flex: 1; font-family: 'SF Mono', 'Fira Code', monospace;
+      font-size: 13px; color: var(--accent); word-break: break-all; user-select: all;
+    }
+    .copy-btn {
+      width: 34px; height: 34px; display: flex; align-items: center; justify-content: center;
+      background: transparent; border: 1px solid var(--border); border-radius: 6px;
+      color: var(--text-secondary); cursor: pointer; transition: all 0.2s; font-size: 14px;
+      flex-shrink: 0;
+    }
+    .copy-btn:hover { background: var(--bg-card-hover); color: var(--text-primary); }
+    .copy-btn.copied { color: var(--success); border-color: var(--success); }
+
+    /* User rows (admin) */
+    .user-row {
+      display: grid; grid-template-columns: 1fr auto auto auto;
+      gap: 12px; align-items: center;
+      padding: 14px 16px; background: var(--bg-card);
+      border: 1px solid var(--border); border-radius: var(--radius-md);
+      margin-bottom: 8px; transition: all 0.2s;
+    }
+    .user-row:hover { border-color: var(--border-hover); background: var(--bg-card-hover); }
+    .user-info .user-id { font-size: 13px; font-weight: 500; word-break: break-all; }
+    .user-info .user-meta { font-size: 11px; color: var(--text-muted); margin-top: 3px; }
+    .user-key {
+      font-family: 'SF Mono', monospace; font-size: 11px; color: var(--accent);
+      max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+      padding: 4px 8px; background: var(--bg-input); border-radius: 4px; cursor: pointer;
+    }
+
+    /* Message result */
+    .msg-result {
+      padding: 14px; background: var(--bg-input); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); font-family: 'SF Mono', monospace;
+      font-size: 12px; color: var(--text-secondary); white-space: pre-wrap;
+      max-height: 200px; overflow-y: auto; display: none;
+    }
+    .msg-result.visible { display: block; margin-top: 16px; }
+
+    /* Toast */
+    .toast-container {
+      position: fixed; top: 72px; right: 20px; z-index: 9999;
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    .toast {
+      padding: 10px 18px; background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); box-shadow: var(--shadow-md);
+      font-size: 13px; animation: slideIn 0.3s ease; max-width: 360px;
+    }
+    .toast.success { border-left: 3px solid var(--success); }
+    .toast.error { border-left: 3px solid var(--danger); }
+
+    .empty-state {
+      text-align: center; padding: 48px 24px; color: var(--text-muted);
+    }
+    .empty-state .icon { font-size: 40px; margin-bottom: 12px; opacity: 0.5; }
+    .empty-state h3 { font-size: 16px; font-weight: 600; color: var(--text-secondary); margin-bottom: 6px; }
+    .empty-state p { font-size: 13px; }
+
+    /* Info row */
+    .info-row {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 13px;
+    }
+    .info-row:last-child { border-bottom: none; }
+    .info-row .label { color: var(--text-muted); }
+    .info-row .value { color: var(--text-primary); font-weight: 500; }
+
+    @media (max-width: 768px) {
+      .user-row { grid-template-columns: 1fr; gap: 8px; }
+      .main-content { padding: 16px; }
+      .topbar { padding: 0 16px; }
+      .landing-card { padding: 32px 24px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div id="toast-container" class="toast-container"></div>
+
+    <!-- =============== View: Landing =============== -->
+    <div id="view-landing" class="view active">
+      <div class="landing">
+        <div class="landing-card">
+          <div class="landing-logo">
+            <div class="icon">💬</div>
+            <h1>WeChat iLink</h1>
+            <p>微信消息 API 平台</p>
+          </div>
+
+          <div id="landing-content">
+            <div class="landing-modes">
+              <div id="login-user-section">
+                <button onclick="startScanLogin()" class="btn btn-primary btn-block" id="btn-scan">📱 微信扫码 登录 / 注册</button>
+              </div>
+              <div id="login-admin-section" style="display:none;">
+                <div style="font-size:14px;color:var(--text-muted);margin-bottom:12px;text-align:center;">管理后台登录</div>
+                <form id="admin-login-form" style="display:flex;gap:8px;">
+                  <input type="password" id="admin-password" class="form-input" placeholder="管理员密码" style="flex:1;">
+                  <button type="submit" class="btn btn-primary">进入</button>
+                </form>
+              </div>
+            </div>
+          </div>
+
+          <!-- QR scanning area (hidden by default) -->
+          <div id="qr-area" style="display:none;">
+            <div class="qr-box" id="qr-box">
+              <div class="spinner" style="margin: 40px auto;"></div>
+              <p class="hint">正在生成二维码...</p>
+            </div>
+            <button onclick="cancelScan()" class="btn btn-ghost btn-block btn-sm" style="margin-top:12px;">取消</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- =============== View: User Dashboard =============== -->
+    <div id="view-user" class="view">
+      <div class="topbar">
+        <div class="topbar-brand">
+          <div class="icon">💬</div>
+          <h2>WeChat iLink</h2>
+        </div>
+        <div class="topbar-actions">
+          <span class="topbar-user" id="topbar-userid"></span>
+          <button onclick="userLogout()" class="btn btn-ghost btn-sm">退出</button>
+        </div>
+      </div>
+
+      <div class="main-content">
+        <div class="tabs">
+          <button class="tab-btn active" onclick="switchUserTab('info')" id="utab-btn-info">🔑 我的信息</button>
+          <button class="tab-btn" onclick="switchUserTab('send')" id="utab-btn-send">✉️ 发送消息</button>
+          <button class="tab-btn" onclick="switchUserTab('docs')" id="utab-btn-docs">📚 API 文档</button>
+        </div>
+
+        <!-- Tab: Info -->
+        <div id="utab-info" class="tab-panel active">
+          <div class="card">
+            <div class="card-header">
+              <h3 class="card-title">API Key</h3>
+              <button onclick="resetApiKey()" class="btn btn-warning btn-sm">🔄 重置 Key</button>
+            </div>
+            <div class="apikey-section">
+              <span class="key" id="user-apikey">-</span>
+              <button class="copy-btn" onclick="copyText(this, document.getElementById('user-apikey').textContent)" title="复制">📋</button>
+            </div>
+            <p style="font-size:12px;color:var(--text-muted);">
+              将此 Key 放入请求头: <code style="color:var(--accent);">X-API-Key: YOUR_KEY</code>
+            </p>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <h3 class="card-title">账户状态</h3>
+              <button onclick="loadUserInfo()" class="btn btn-ghost btn-sm">🔄 刷新</button>
+            </div>
+            <div id="user-info-details">
+              <div class="info-row"><span class="label">用户 ID</span><span class="value" id="info-userid">-</span></div>
+              <div class="info-row"><span class="label">注册时间</span><span class="value" id="info-created">-</span></div>
+              <div class="info-row"><span class="label">最近登录</span><span class="value" id="info-lastlogin">-</span></div>
+              <div class="info-row"><span class="label">在线状态</span><span class="value" id="info-online">-</span></div>
+              <div class="info-row"><span class="label">最近错误</span><span class="value" id="info-lasterror" style="color:var(--danger);font-size:12px;">-</span></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab: Send -->
+        <div id="utab-send" class="tab-panel">
+          <div class="card">
+            <div class="card-header">
+              <h3 class="card-title">发送消息</h3>
+              <span style="font-size:12px;color:var(--text-muted);">限速 30 条/分钟</span>
+            </div>
+            <input type="hidden" id="send-to" value="">
+            <input type="hidden" id="send-context" value="">
+            <div class="form-group">
+              <label>消息内容</label>
+              <textarea id="send-text" class="form-input" placeholder="输入消息内容..."></textarea>
+            </div>
+            <button onclick="sendMessage()" class="btn btn-success btn-block" id="btn-send">📤 发送消息</button>
+            <div id="send-result" class="msg-result"></div>
+          </div>
+        </div>
+
+        <!-- Tab: API Docs -->
+        <div id="utab-docs" class="tab-panel">
+          <!-- Endpoint: POST /send -->
+          <div class="card" style="margin-bottom:16px;">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+              <span style="background:var(--success);color:#0a0a0f;font-weight:700;font-size:11px;padding:4px 10px;border-radius:6px;">POST</span>
+              <code style="color:var(--text-primary);font-size:15px;font-weight:600;">/send</code>
+              <span style="font-size:12px;color:var(--text-muted);margin-left:auto;">🔴 30 次/分钟</span>
+            </div>
+            <p style="font-size:13px;color:var(--text-secondary);margin-bottom:16px;">发送微信文本消息给自己的账号。</p>
+
+            <div style="margin-bottom:12px;">
+              <div style="font-size:12px;color:var(--text-muted);margin-bottom:6px;font-weight:500;">请求头</div>
+              <div style="background:var(--bg-input);border:1px solid var(--border);border-radius:8px;padding:12px;font-family:monospace;font-size:12px;color:var(--text-secondary);">
+                <span style="color:var(--accent);">X-API-Key</span>: <span id="doc-key-1" style="color:var(--warning);">YOUR_API_KEY</span><br>
+                <span style="color:var(--accent);">Content-Type</span>: application/json
+              </div>
+            </div>
+
+            <div style="margin-bottom:12px;">
+              <div style="font-size:12px;color:var(--text-muted);margin-bottom:6px;font-weight:500;">请求体</div>
+              <div style="background:var(--bg-input);border:1px solid var(--border);border-radius:8px;padding:12px;font-family:monospace;font-size:12px;">
+                <span style="color:var(--border-hover)">{</span><br>
+                &nbsp;&nbsp;<span style="color:var(--success);">&quot;text&quot;</span>: <span style="color:var(--warning);">&quot;Hello!&quot;</span><br>
+                <span style="color:var(--border-hover)">}</span>
+              </div>
+            </div>
+
+            <div style="margin-bottom:12px;">
+              <div style="font-size:12px;color:var(--text-muted);margin-bottom:6px;font-weight:500;">成功响应 <code style="color:var(--success);">200</code></div>
+              <div style="background:var(--bg-input);border:1px solid var(--border);border-radius:8px;padding:12px;font-family:monospace;font-size:12px;">
+                <span style="color:var(--border-hover)">{</span><br>
+                &nbsp;&nbsp;<span style="color:var(--success);">&quot;ok&quot;</span>: <span style="color:var(--accent);">true</span>,<br>
+                &nbsp;&nbsp;<span style="color:var(--success);">&quot;clientId&quot;</span>: <span style="color:var(--warning);">&quot;wechat-ilink:...&quot;</span><br>
+                <span style="color:var(--border-hover)">}</span>
+              </div>
+            </div>
+
+            <div style="margin-bottom:4px;">
+              <div style="font-size:12px;color:var(--text-muted);margin-bottom:6px;font-weight:500;">cURL 示例</div>
+              <div style="position:relative;">
+                <pre id="curl-send" style="background:var(--bg-primary);border:1px solid var(--border);border-radius:8px;padding:14px;font-family:monospace;font-size:12px;color:var(--text-secondary);overflow-x:auto;margin:0;"></pre>
+                <button onclick="copyText(this, document.getElementById('curl-send').textContent)" style="position:absolute;top:8px;right:8px;" class="copy-btn">📋</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Endpoint: GET /status -->
+          <div class="card">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+              <span style="background:var(--accent);color:white;font-weight:700;font-size:11px;padding:4px 10px;border-radius:6px;">GET</span>
+              <code style="color:var(--text-primary);font-size:15px;font-weight:600;">/status</code>
+              <span style="font-size:12px;color:var(--text-muted);margin-left:auto;">🟡 60 次/分钟</span>
+            </div>
+            <p style="font-size:13px;color:var(--text-secondary);margin-bottom:16px;">检查账号 WeChat 连接和监听是否在线。</p>
+
+            <div style="margin-bottom:12px;">
+              <div style="font-size:12px;color:var(--text-muted);margin-bottom:6px;font-weight:500;">请求头</div>
+              <div style="background:var(--bg-input);border:1px solid var(--border);border-radius:8px;padding:12px;font-family:monospace;font-size:12px;color:var(--text-secondary);">
+                <span style="color:var(--accent);">X-API-Key</span>: <span id="doc-key-2" style="color:var(--warning);">YOUR_API_KEY</span>
+              </div>
+            </div>
+
+            <div style="margin-bottom:12px;">
+              <div style="font-size:12px;color:var(--text-muted);margin-bottom:6px;font-weight:500;">成功响应 <code style="color:var(--success);">200</code></div>
+              <div style="background:var(--bg-input);border:1px solid var(--border);border-radius:8px;padding:12px;font-family:monospace;font-size:12px;">
+                <span style="color:var(--border-hover)">{</span><br>
+                &nbsp;&nbsp;<span style="color:var(--success);">&quot;ok&quot;</span>: <span style="color:var(--accent);">true</span>,<br>
+                &nbsp;&nbsp;<span style="color:var(--success);">&quot;online&quot;</span>: <span style="color:var(--accent);">true</span>,<br>
+                &nbsp;&nbsp;<span style="color:var(--success);">&quot;userId&quot;</span>: <span style="color:var(--warning);">&quot;xxx@im.wechat&quot;</span>,<br>
+                &nbsp;&nbsp;<span style="color:var(--success);">&quot;monitoring&quot;</span>: <span style="color:var(--accent);">true</span>,<br>
+                &nbsp;&nbsp;<span style="color:var(--success);">&quot;lastError&quot;</span>: <span style="color:var(--accent);">null</span><br>
+                <span style="color:var(--border-hover)">}</span>
+              </div>
+            </div>
+
+            <div style="margin-bottom:4px;">
+              <div style="font-size:12px;color:var(--text-muted);margin-bottom:6px;font-weight:500;">cURL 示例</div>
+              <div style="position:relative;">
+                <pre id="curl-status" style="background:var(--bg-primary);border:1px solid var(--border);border-radius:8px;padding:14px;font-family:monospace;font-size:12px;color:var(--text-secondary);overflow-x:auto;margin:0;"></pre>
+                <button onclick="copyText(this, document.getElementById('curl-status').textContent)" style="position:absolute;top:8px;right:8px;" class="copy-btn">📋</button>
+              </div>
+            </div>
+
+            <div style="margin-top:16px;padding:12px;background:var(--warning-bg);border:1px solid rgba(255,167,38,0.2);border-radius:8px;">
+              <p style="font-size:12px;color:var(--warning);">⚠️ 限速超出时返回 <code>429</code>，响应头 <code>Retry-After</code> 标注需等待秒数。</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- =============== View: Admin Dashboard =============== -->
+    <div id="view-admin" class="view">
+      <div class="topbar">
+        <div class="topbar-brand">
+          <div class="icon">💬</div>
+          <h2>WeChat iLink — 管理面板</h2>
+        </div>
+        <div class="topbar-actions">
+          <button onclick="adminStartScan()" class="btn btn-primary btn-sm">➕ 新用户扫码</button>
+          <button onclick="adminLogout()" class="btn btn-ghost btn-sm">退出</button>
+        </div>
+      </div>
+
+      <div class="main-content">
+        <div class="card">
+          <div class="card-header">
+            <h3 class="card-title">已注册用户</h3>
+            <button onclick="refreshAdminUsers()" class="btn btn-ghost btn-sm">🔄 刷新</button>
+          </div>
+          <div id="admin-users-list">
+            <div class="empty-state">
+              <div class="icon">👤</div>
+              <h3>暂无用户</h3>
+              <p>点击右上角"新用户扫码"添加用户</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Admin QR area -->
+        <div id="admin-qr-card" class="card" style="display:none;">
+          <div class="card-header">
+            <h3 class="card-title">扫码添加用户</h3>
+            <button onclick="cancelAdminScan()" class="btn btn-ghost btn-sm">取消</button>
+          </div>
+          <div class="qr-box" id="admin-qr-box">
+            <div class="spinner" style="margin: 40px auto;"></div>
+            <p class="hint">正在生成二维码...</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const API = '';
+    let currentUser = null;  // { userId, apiKey }
+    let adminToken = null;
+    let scanLoginId = null;
+    let scanPollTimer = null;
+    let adminScanLoginId = null;
+    let adminPollTimer = null;
+
+    // ---- Toast ----
+    function toast(msg, type = 'success') {
+      const c = document.getElementById('toast-container');
+      const el = document.createElement('div');
+      el.className = `toast ${type}`;
+      el.textContent = msg;
+      c.appendChild(el);
+      setTimeout(() => { el.style.opacity = '0'; setTimeout(() => el.remove(), 300); }, 3500);
+    }
+
+    function escapeHtml(s) { return s ? s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;') : ''; }
+    function fmtTime(iso) { if (!iso) return '-'; try { return new Date(iso).toLocaleString('zh-CN'); } catch { return iso; } }
+
+    // ---- View switching ----
+    function showView(name) {
+      document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+      document.getElementById('view-' + name).classList.add('active');
+    }
+
+    // ---- Copy helper ----
+    function copyText(btn, text) {
+      navigator.clipboard.writeText(text).then(() => {
+        btn.classList.add('copied'); btn.textContent = '✅';
+        setTimeout(() => { btn.classList.remove('copied'); btn.textContent = '📋'; }, 2000);
+        toast('已复制');
+      });
+    }
+
+    // ================================================================
+    //  USER SCAN LOGIN
+    // ================================================================
+    async function startScanLogin() {
+      const landingContent = document.getElementById('landing-content');
+      const qrArea = document.getElementById('qr-area');
+      landingContent.style.display = 'none';
+      qrArea.style.display = 'block';
+      const qrBox = document.getElementById('qr-box');
+      qrBox.innerHTML = '<div class="spinner" style="margin:40px auto;"></div><p class="hint">正在生成二维码...</p>';
+
+      clearPoll('scan');
+
+      try {
+        const resp = await fetch(`${API}/auth/login`, { method: 'POST' });
+        const data = await resp.json();
+        scanLoginId = data.loginId;
+        // Start polling immediately
+        pollScanStatus();
+      } catch (err) {
+        qrBox.innerHTML = `<p style="color:var(--danger);">请求失败: ${escapeHtml(err.message)}</p>`;
+      }
+    }
+
+    function pollScanStatus() {
+      if (!scanLoginId) return;
+      scanPollTimer = setInterval(async () => {
+        try {
+          const r = await fetch(`${API}/auth/login/${scanLoginId}`);
+          const d = await r.json();
+          const qrBox = document.getElementById('qr-box');
+
+          if (d.qrcodeUrl && (d.status === 'wait' || d.status === 'scaned')) {
+            const qrImg = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(d.qrcodeUrl)}`;
+            qrBox.innerHTML = `
+              <img src="${qrImg}" alt="QR" />
+              <p class="hint">请使用微信扫描二维码</p>
+              <p class="status-text">${d.status === 'scaned' ? '已扫码，请在手机上确认...' : '等待扫码...'}</p>`;
+          } else if (d.status === 'starting') {
+            qrBox.innerHTML = '<div class="spinner" style="margin:40px auto;"></div><p class="hint">正在生成二维码...</p>';
+          }
+
+          if (d.status === 'confirmed') {
+            clearPoll('scan');
+            currentUser = { userId: d.userId, apiKey: d.apiKey };
+            localStorage.setItem('user', JSON.stringify(currentUser));
+            toast('登录成功！');
+            enterUserDashboard();
+          } else if (d.status === 'failed' || d.status === 'cancelled') {
+            clearPoll('scan');
+            qrBox.innerHTML = `
+              <div style="font-size:36px;margin-bottom:12px;">❌</div>
+              <p style="color:var(--danger);font-weight:600;">登录失败</p>
+              <p style="color:var(--text-muted);font-size:13px;margin-top:6px;">${escapeHtml(d.error || '')}</p>
+              <button onclick="startScanLogin()" class="btn btn-primary btn-sm" style="margin-top:16px;">重试</button>`;
+          }
+        } catch { /* ignore */ }
+      }, 1500);
+    }
+
+    function cancelScan() {
+      clearPoll('scan');
+      if (scanLoginId) fetch(`${API}/auth/login/${scanLoginId}`, { method: 'DELETE' }).catch(() => {});
+      scanLoginId = null;
+      document.getElementById('landing-content').style.display = 'block';
+      document.getElementById('qr-area').style.display = 'none';
+    }
+
+    function clearPoll(which) {
+      if (which === 'scan' && scanPollTimer) { clearInterval(scanPollTimer); scanPollTimer = null; }
+      if (which === 'admin' && adminPollTimer) { clearInterval(adminPollTimer); adminPollTimer = null; }
+    }
+
+    // ================================================================
+    //  USER DASHBOARD
+    // ================================================================
+    function enterUserDashboard() {
+      showView('user');
+      document.getElementById('topbar-userid').textContent = currentUser.userId;
+      document.getElementById('user-apikey').textContent = currentUser.apiKey;
+      loadUserInfo();
+    }
+
+    async function loadUserInfo() {
+      try {
+        const r = await fetch(`${API}/me`, { headers: { 'X-API-Key': currentUser.apiKey } });
+        if (r.status === 401) { toast('Key 无效，请重新登录', 'error'); userLogout(); return; }
+        const d = await r.json();
+        document.getElementById('user-apikey').textContent = d.apiKey;
+        document.getElementById('info-userid').textContent = d.userId;
+        document.getElementById('info-created').textContent = fmtTime(d.createdAt);
+        document.getElementById('info-lastlogin').textContent = fmtTime(d.lastLoginAt);
+        document.getElementById('info-online').innerHTML = d.online
+          ? '<span class="badge badge-success">🟢 在线</span>'
+          : '<span class="badge badge-danger">🔴 离线</span>';
+        const errEl = document.getElementById('info-lasterror');
+        errEl.textContent = d.lastError || '-';
+        errEl.style.color = d.lastError ? 'var(--danger)' : 'var(--text-muted)';
+        // Update local key in case it changed server-side
+        currentUser.apiKey = d.apiKey;
+        localStorage.setItem('user', JSON.stringify(currentUser));
+        // Fill API docs with real key
+        fillApiDocs();
+      } catch (e) { toast('加载失败: ' + e.message, 'error'); }
+    }
+
+    async function resetApiKey() {
+      if (!confirm('重置后旧 Key 立即失效，确定要重置吗？')) return;
+      try {
+        const r = await fetch(`${API}/me/apikey/reset`, { method: 'POST', headers: { 'X-API-Key': currentUser.apiKey } });
+        const d = await r.json();
+        if (r.ok) {
+          currentUser.apiKey = d.apiKey;
+          localStorage.setItem('user', JSON.stringify(currentUser));
+          document.getElementById('user-apikey').textContent = d.apiKey;
+          toast('API Key 已重置');
+        } else {
+          toast(d.message || '重置失败', 'error');
+        }
+      } catch (e) { toast('重置失败: ' + e.message, 'error'); }
+    }
+
+    function userLogout() {
+      currentUser = null;
+      localStorage.removeItem('user');
+      showView('landing');
+      document.getElementById('landing-content').style.display = 'block';
+      document.getElementById('qr-area').style.display = 'none';
+    }
+
+    function switchUserTab(name) {
+      document.querySelectorAll('#view-user .tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('#view-user .tab-panel').forEach(p => p.classList.remove('active'));
+      document.getElementById('utab-' + name).classList.add('active');
+      const btn = document.getElementById('utab-btn-' + name);
+      if (btn) btn.classList.add('active');
+      if (name === 'docs') fillApiDocs();
+    }
+
+    function fillApiDocs() {
+      const key = currentUser?.apiKey || 'YOUR_API_KEY';
+      const base = window.location.origin;
+      ['doc-key-1', 'doc-key-2'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = key;
+      });
+      const sendEl = document.getElementById('curl-send');
+      if (sendEl) sendEl.textContent =
+`curl -X POST ${base}/send \\
+  -H "X-API-Key: ${key}" \\
+  -H "Content-Type: application/json" \\
+  -d '{"text": "Hello!"}'`;
+      const statusEl = document.getElementById('curl-status');
+      if (statusEl) statusEl.textContent =
+`curl ${base}/status \\
+  -H "X-API-Key: ${key}"`;
+    }
+
+    async function sendMessage() {
+      const to = currentUser.userId;
+      const text = document.getElementById('send-text').value.trim();
+      const result = document.getElementById('send-result');
+
+      if (!text) { toast('请输入消息内容', 'error'); return; }
+
+      const btn = document.getElementById('btn-send');
+      btn.disabled = true; btn.textContent = '发送中...';
+      result.classList.add('visible');
+      result.textContent = '发送中...';
+
+      try {
+        const r = await fetch(`${API}/send`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-API-Key': currentUser.apiKey },
+          body: JSON.stringify({ text }),
+        });
+        const d = await r.json();
+        if (r.ok) {
+          result.textContent = `✅ 发送成功!\n\n${JSON.stringify(d, null, 2)}`;
+          toast('消息发送成功');
+        } else if (r.status === 429) {
+          result.textContent = `⏱️ 限速 (429)\n\n${JSON.stringify(d, null, 2)}`;
+          toast('发送过于频繁，请稍后重试', 'error');
+        } else {
+          result.textContent = `❌ 失败 (${r.status})\n\n${JSON.stringify(d, null, 2)}`;
+          toast(d.message || '发送失败', 'error');
+        }
+      } catch (e) {
+        result.textContent = `❌ 请求失败: ${e.message}`;
+        toast('发送失败', 'error');
+      }
+      btn.disabled = false; btn.textContent = '📤 发送消息';
+    }
+
+    // ---- History ----
+    async function loadHistory() {
+      const list = document.getElementById('history-list');
+      try {
+        const r = await fetch(`${API}/me/messages?limit=30`, { headers: { 'X-API-Key': currentUser.apiKey } });
+        const d = await r.json();
+        const items = d.items || [];
+        if (!items.length) {
+          list.innerHTML = '<div class="empty-state"><div class="icon">📭</div><h3>暂无消息</h3><p>启动 Monitor 后收到的消息会显示在这里</p></div>';
+          return;
+        }
+        list.innerHTML = items.map(e => {
+          const dirIcon = e.direction === 'inbound' ? '📩' : e.direction === 'outbound' ? '📤' : '⚙️';
+          const dirColor = e.direction === 'inbound' ? 'var(--success)' : e.direction === 'outbound' ? 'var(--accent)' : 'var(--text-muted)';
+          return `
+            <div style="padding:10px 0;border-bottom:1px solid var(--border);font-size:13px;">
+              <div style="display:flex;justify-content:space-between;align-items:center;">
+                <span style="color:${dirColor};font-weight:500;">${dirIcon} ${escapeHtml(e.summary)}</span>
+                <span style="color:var(--text-muted);font-size:11px;">${fmtTime(e.createdAt)}</span>
+              </div>
+              ${e.userId ? `<div style="color:var(--text-muted);font-size:11px;margin-top:2px;">User: ${escapeHtml(e.userId)}</div>` : ''}
+            </div>`;
+        }).join('');
+      } catch (e) {
+        list.innerHTML = `<p style="color:var(--danger);font-size:13px;">加载失败: ${escapeHtml(e.message)}</p>`;
+      }
+    }
+
+    // ================================================================
+    //  ADMIN
+    // ================================================================
+    function getAdminHeaders() {
+      return { 'Content-Type': 'application/json', 'X-Admin-Password': adminToken ? atob(adminToken) : '' };
+    }
+
+    document.getElementById('admin-login-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const pw = document.getElementById('admin-password').value;
+      try {
+        const r = await fetch(`${API}/admin/login`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ password: pw }),
+        });
+        const d = await r.json();
+        if (!r.ok) { toast(d.message || '密码错误', 'error'); return; }
+        adminToken = d.token;
+        localStorage.setItem('adminToken', adminToken);
+        enterAdmin();
+        toast('管理员登录成功');
+      } catch (err) { toast('错误: ' + err.message, 'error'); }
+    });
+
+    function enterAdmin() {
+      showView('admin');
+      refreshAdminUsers();
+    }
+
+    function adminLogout() {
+      adminToken = null;
+      localStorage.removeItem('adminToken');
+      showView('landing');
+    }
+
+    async function refreshAdminUsers() {
+      try {
+        const r = await fetch(`${API}/admin/users`, { headers: getAdminHeaders() });
+        if (r.status === 401) { toast('认证过期', 'error'); adminLogout(); return; }
+        const d = await r.json();
+        const users = d.users || [];
+        const list = document.getElementById('admin-users-list');
+        if (!users.length) {
+          list.innerHTML = '<div class="empty-state"><div class="icon">👤</div><h3>暂无用户</h3><p>点击右上角添加用户</p></div>';
+          return;
+        }
+        list.innerHTML = users.map(u => `
+          <div class="user-row">
+            <div class="user-info">
+              <div class="user-id">${escapeHtml(u.userId)}</div>
+              <div class="user-meta">注册: ${fmtTime(u.createdAt)} · 登录: ${fmtTime(u.lastLoginAt)}</div>
+            </div>
+            <span class="user-key" onclick="copyText(this, '${escapeHtml(u.apiKey)}')" title="点击复制 Key">${escapeHtml(u.apiKey)}</span>
+            <span class="badge ${u.connected ? 'badge-success' : 'badge-danger'}">${u.connected ? '🟢 在线' : '🔴 离线'}</span>
+            <button class="btn btn-danger btn-sm" onclick="adminDeleteUser('${escapeHtml(u.userId)}')">删除</button>
+          </div>`).join('');
+      } catch (e) { toast('加载失败', 'error'); }
+    }
+
+    async function adminDeleteUser(userId) {
+      if (!confirm('确定要删除 ' + userId + '？')) return;
+      try {
+        await fetch(`${API}/admin/users/${encodeURIComponent(userId)}`, { method: 'DELETE', headers: getAdminHeaders() });
+        toast('已删除'); refreshAdminUsers();
+      } catch { toast('删除失败', 'error'); }
+    }
+
+    // ---- Admin add user via scan ----
+    async function adminStartScan() {
+      document.getElementById('admin-qr-card').style.display = 'block';
+      const qrBox = document.getElementById('admin-qr-box');
+      qrBox.innerHTML = '<div class="spinner" style="margin:40px auto;"></div><p class="hint">正在生成二维码...</p>';
+      clearPoll('admin');
+
+      try {
+        const r = await fetch(`${API}/auth/login`, { method: 'POST' });
+        const d = await r.json();
+        adminScanLoginId = d.loginId;
+        adminPollTimer = setInterval(async () => {
+          try {
+            const sr = await fetch(`${API}/auth/login/${adminScanLoginId}`);
+            const sd = await sr.json();
+
+            if (sd.qrcodeUrl && (sd.status === 'wait' || sd.status === 'scaned')) {
+              const img = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(sd.qrcodeUrl)}`;
+              qrBox.innerHTML = `
+                <img src="${img}" alt="QR" />
+                <p class="hint">${sd.status === 'scaned' ? '已扫码，等待确认...' : '请使用微信扫描'}</p>`;
+            }
+            if (sd.status === 'confirmed') {
+              clearPoll('admin');
+              qrBox.innerHTML = `
+                <div style="font-size:36px;margin-bottom:12px;">✅</div>
+                <p style="color:var(--success);font-weight:600;">用户已添加</p>
+                <p style="font-size:13px;color:var(--text-secondary);margin-top:6px;">${escapeHtml(sd.userId)}</p>
+                <div class="apikey-section" style="margin-top:12px;justify-content:center;">
+                  <span class="key">${escapeHtml(sd.apiKey)}</span>
+                </div>`;
+              toast('用户添加成功'); refreshAdminUsers();
+            } else if (sd.status === 'failed' || sd.status === 'cancelled') {
+              clearPoll('admin');
+              qrBox.innerHTML = `<p style="color:var(--danger);">失败: ${escapeHtml(sd.error || '')}</p>`;
+            }
+          } catch { /* ignore */ }
+        }, 1500);
+      } catch (e) {
+        qrBox.innerHTML = `<p style="color:var(--danger);">请求失败</p>`;
+      }
+    }
+
+    function cancelAdminScan() {
+      clearPoll('admin');
+      if (adminScanLoginId) fetch(`${API}/auth/login/${adminScanLoginId}`, { method: 'DELETE' }).catch(() => {});
+      adminScanLoginId = null;
+      document.getElementById('admin-qr-card').style.display = 'none';
+    }
+
+    // ================================================================
+    //  INIT — restore from localStorage
+    // ================================================================
+    (function init() {
+      const path = window.location.pathname;
+
+      if (path === '/admin') {
+        document.getElementById('login-user-section').style.display = 'none';
+        document.getElementById('login-admin-section').style.display = 'block';
+        const savedAdmin = localStorage.getItem('adminToken');
+        if (savedAdmin) {
+          adminToken = savedAdmin;
+          enterAdmin();
+          return;
+        }
+        showView('landing');
+      } else {
+        document.getElementById('login-user-section').style.display = 'block';
+        document.getElementById('login-admin-section').style.display = 'none';
+        const savedUser = localStorage.getItem('user');
+        if (savedUser) {
+          try {
+            currentUser = JSON.parse(savedUser);
+            if (currentUser && currentUser.apiKey) {
+              enterUserDashboard();
+              return;
+            }
+          } catch {}
+        }
+        showView('landing');
+      }
+    })();
+  </script>
+</body>
+</html>
